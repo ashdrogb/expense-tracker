@@ -5,12 +5,12 @@ import { Header, PageWrapper } from "./components/layout";
 import { StatCard } from "./components/ui";
 import { MonthlyBarChart, CategoryPieChart, NetLineChart } from "./components/charts";
 import { TransactionList, TransactionForm } from "./components/transactions";
+import { CSVImport } from "./components/csv";
 import { AuthPage } from "./components/auth";
 import { useFinancials } from "./hooks";
 import type { ActiveView } from "./types";
-import { fmt } from "./utils";
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
+type ExtendedView = ActiveView | "import";
 
 const DashboardView = ({ onNavigateToAdd }: { onNavigateToAdd: () => void }) => {
   const { summary, monthlySummaries, expenseBreakdown } = useFinancials();
@@ -50,11 +50,15 @@ const HistoryView = ({ onNavigateToAdd }: { onNavigateToAdd: () => void }) => (
   </PageWrapper>
 );
 
-// ─── App Shell (shown when logged in) ────────────────────────────────────────
+const ImportView = ({ onDone }: { onDone: () => void }) => (
+  <PageWrapper title="Import Bank CSV" subtitle="Bulk import transactions from your bank statement">
+    <CSVImport onDone={onDone}/>
+  </PageWrapper>
+);
 
 const AppShell = () => {
   const { user, logout } = useAuth();
-  const [activeView, setActiveView] = useState<ActiveView>("dashboard");
+  const [activeView, setActiveView] = useState<ExtendedView>("dashboard");
 
   return (
     <AppProvider isLoggedIn={!!user}>
@@ -68,12 +72,11 @@ const AppShell = () => {
         {activeView==="dashboard" && <DashboardView onNavigateToAdd={()=>setActiveView("add")}/>}
         {activeView==="add"       && <AddView onSuccess={()=>setActiveView("dashboard")} onCancel={()=>setActiveView("dashboard")}/>}
         {activeView==="history"   && <HistoryView onNavigateToAdd={()=>setActiveView("add")}/>}
+        {activeView==="import"    && <ImportView onDone={()=>setActiveView("dashboard")}/>}
       </div>
     </AppProvider>
   );
 };
-
-// ─── Root — shows AuthPage or AppShell depending on login state ───────────────
 
 const Root = () => {
   const { user } = useAuth();

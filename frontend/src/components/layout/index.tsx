@@ -1,18 +1,19 @@
-import type { ActiveView } from "../../types";
+import type { ReactNode } from "react";
 
-// ─── Header ───────────────────────────────────────────────────────────────────
+type ExtendedView = "dashboard" | "add" | "history" | "import";
 
 interface HeaderProps {
-  activeView: ActiveView;
-  onNavigate: (view: ActiveView) => void;
+  activeView: ExtendedView;
+  onNavigate: (view: ExtendedView) => void;
   userEmail?: string;
   onLogout?: () => void;
 }
 
-const NAV_ITEMS: { view: ActiveView; label: string; icon: string }[] = [
+const NAV_ITEMS: { view: ExtendedView; label: string; icon: string }[] = [
   { view: "dashboard", label: "Dashboard", icon: "📊" },
   { view: "add",       label: "Add",       icon: "➕" },
   { view: "history",   label: "History",   icon: "📋" },
+  { view: "import",    label: "Import CSV", icon: "📂" },
 ];
 
 export const Header = ({ activeView, onNavigate, userEmail, onLogout }: HeaderProps) => (
@@ -28,7 +29,6 @@ export const Header = ({ activeView, onNavigate, userEmail, onLogout }: HeaderPr
     top: 0,
     zIndex: 100,
   }}>
-    {/* Logo */}
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💸</div>
       <div>
@@ -37,7 +37,6 @@ export const Header = ({ activeView, onNavigate, userEmail, onLogout }: HeaderPr
       </div>
     </div>
 
-    {/* Nav */}
     <nav style={{ display: "flex", gap: 4 }}>
       {NAV_ITEMS.map(({ view, label, icon }) => (
         <button key={view} onClick={() => onNavigate(view)} style={{ padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6, background: activeView === view ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent", color: activeView === view ? "#fff" : "#64748b" }}>
@@ -46,7 +45,6 @@ export const Header = ({ activeView, onNavigate, userEmail, onLogout }: HeaderPr
       ))}
     </nav>
 
-    {/* User + Logout */}
     {userEmail && (
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ fontSize: 13, color: "#64748b" }}>{userEmail}</span>
@@ -58,10 +56,8 @@ export const Header = ({ activeView, onNavigate, userEmail, onLogout }: HeaderPr
   </header>
 );
 
-// ─── PageWrapper ──────────────────────────────────────────────────────────────
-
 interface PageWrapperProps {
-  children: React.ReactNode;
+  children: ReactNode;
   title?: string;
   subtitle?: string;
 }

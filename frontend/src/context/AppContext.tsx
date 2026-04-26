@@ -1,8 +1,3 @@
-// src/context/AppContext.tsx
-// All transaction state now lives on the server.
-// On mount: fetch from API. On add/edit/delete: call API then update local state.
-// Local state is just a cache of what the server has.
-
 import {
   createContext, useContext, useReducer, useCallback, useEffect,
   type ReactNode,
@@ -12,6 +7,7 @@ import { generateId } from "../utils";
 import {
   apiFetchTransactions, apiCreateTransaction,
   apiUpdateTransaction, apiDeleteTransaction,
+  apiBulkCreateTransactions,
 } from "../api";
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -23,16 +19,19 @@ interface AppState {
 }
 
 type Action =
-  | { type: "SET_TRANSACTIONS"; payload: Transaction[] }
-  | { type: "ADD_TRANSACTION";  payload: Transaction }
-  | { type: "EDIT_TRANSACTION"; payload: Transaction }
-  | { type: "DELETE_TRANSACTION"; payload: string }
-  | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_ERROR"; payload: string | null };
+  | { type: "SET_TRANSACTIONS";  payload: Transaction[] }
+  | { type: "ADD_TRANSACTION";   payload: Transaction }
+  | { type: "BULK_ADD";          payload: Transaction[] }
+  | { type: "EDIT_TRANSACTION";  payload: Transaction }
+  | { type: "DELETE_TRANSACTION";payload: string }
+  | { type: "SET_LOADING";       payload: boolean }
+  | { type: "SET_ERROR";         payload: string | null };
 
 const reducer = (state: AppState, action: Action): AppState => {
   switch (action.type) {
     case "SET_TRANSACTIONS":  return { ...state, transactions: action.payload, loading: false };
+    // Prepend all bulk rows to existing transactions in one update
+    case "BULK_ADD":          return { ...state, transactions: [...action.payload, ...state.transactions] };
     case "ADD_TRANSACTION":   return { ...state, transactions: [action.payload, ...state.transactions] };
     case "EDIT_TRANSACTION":  return { ...state, transactions: state.transactions.map(t => t.id === action.payload.id ? { ...action.payload, createdAt: t.createdAt } : t) };
     case "DELETE_TRANSACTION":return { ...state, transactions: state.transactions.filter(t => t.id !== action.payload) };
@@ -48,9 +47,10 @@ interface AppContextValue {
   transactions: Transaction[];
   loading: boolean;
   error: string | null;
-  addTransaction:    (form: TransactionFormData) => Promise<void>;
-  deleteTransaction: (id: string) => Promise<void>;
-  editTransaction:   (id: string, form: TransactionFormData) => Promise<void>;
+  addTransaction:      (form: TransactionFormData) => Promise<void>;
+  bulkAddTransactions: (txns: Transaction[]) => Promise<void>;
+  deleteTransaction:   (id: string) => Promise<void>;
+  editTransaction:     (id: string, form: TransactionFormData) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -59,7 +59,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 interface AppProviderProps {
   children: ReactNode;
-  isLoggedIn: boolean; // only fetch when a user is logged in
+  isLoggedIn: boolean;
 }
 
 export const AppProvider = ({ children, isLoggedIn }: AppProviderProps) => {
@@ -69,7 +69,6 @@ export const AppProvider = ({ children, isLoggedIn }: AppProviderProps) => {
     error: null,
   });
 
-  // Fetch all transactions from the server when the user logs in
   useEffect(() => {
     if (!isLoggedIn) return;
     dispatch({ type: "SET_LOADING", payload: true });
@@ -88,9 +87,14 @@ export const AppProvider = ({ children, isLoggedIn }: AppProviderProps) => {
       date: form.date,
       createdAt: Date.now(),
     };
-    // Optimistic update: add to local state immediately, then confirm with server
     dispatch({ type: "ADD_TRANSACTION", payload: txn });
     await apiCreateTransaction(txn);
+  }, []);
+
+  // Send all to server in one call, then update local state in one dispatch
+  const bulkAddTransactions = useCallback(async (txns: Transaction[]) => {
+    await apiBulkCreateTransactions(txns);
+    dispatch({ type: "BULK_ADD", payload: txns });
   }, []);
 
   const deleteTransaction = useCallback(async (id: string) => {
@@ -118,6 +122,7 @@ export const AppProvider = ({ children, isLoggedIn }: AppProviderProps) => {
       loading: state.loading,
       error: state.error,
       addTransaction,
+      bulkAddTransactions,
       deleteTransaction,
       editTransaction,
     }}>

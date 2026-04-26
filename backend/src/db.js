@@ -1,4 +1,3 @@
-
 const initSqlJs = require("sql.js");
 const fs = require("fs");
 const path = require("path");
@@ -60,8 +59,14 @@ const prepare = (sql) => ({
     stmt.free();
     return rows;
   },
+  // Accepts either spread args OR a single array — handles both cases
   run: (...params) => {
-    db.run(sql, params);
+    // If called with a single array argument, use it directly
+    // If called with spread args, params is already the array
+    const bindParams = params.length === 1 && Array.isArray(params[0])
+      ? params[0]
+      : params;
+    db.run(sql, bindParams);
     save();
     const changes = db.getRowsModified();
     const idRow = db.exec("SELECT last_insert_rowid() AS id");

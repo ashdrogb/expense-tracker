@@ -55,3 +55,6 @@ export const apiUpdateTransaction = (id: string, form: TransactionFormData) =>
 
 export const apiDeleteTransaction = (id: string) =>
   request<{ id: string }>("DELETE", `/api/transactions/${id}`);
+
+export const apiBulkCreateTransactions = (txns: Transaction[]) =>
+  request<{ inserted: number }>("POST", "/api/transactions/bulk", { transactions: txns });
