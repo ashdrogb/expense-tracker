@@ -6,11 +6,11 @@ import { StatCard } from "./components/ui";
 import { MonthlyBarChart, CategoryPieChart, NetLineChart } from "./components/charts";
 import { TransactionList, TransactionForm } from "./components/transactions";
 import { CSVImport } from "./components/csv";
+import { StatementsPage } from "./components/statements";
 import { AuthPage } from "./components/auth";
 import { useFinancials } from "./hooks";
-import type { ActiveView } from "./types";
 
-type ExtendedView = ActiveView | "import";
+type ActiveView = "dashboard" | "add" | "history" | "import" | "statements";
 
 const DashboardView = ({ onNavigateToAdd }: { onNavigateToAdd: () => void }) => {
   const { summary, monthlySummaries, expenseBreakdown } = useFinancials();
@@ -38,7 +38,7 @@ const DashboardView = ({ onNavigateToAdd }: { onNavigateToAdd: () => void }) => 
   );
 };
 
-const AddView    = ({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) => (
+const AddView = ({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) => (
   <PageWrapper title="New Transaction" subtitle="Record an income or expense">
     <TransactionForm onSuccess={onSuccess} onCancel={onCancel}/>
   </PageWrapper>
@@ -51,42 +51,36 @@ const HistoryView = ({ onNavigateToAdd }: { onNavigateToAdd: () => void }) => (
 );
 
 const ImportView = ({ onDone }: { onDone: () => void }) => (
-  <PageWrapper title="Import Bank CSV" subtitle="Bulk import transactions from your bank statement">
+  <PageWrapper title="Import Bank CSV" subtitle="Bulk import from your bank statement">
     <CSVImport onDone={onDone}/>
+  </PageWrapper>
+);
+
+const StatementsView = () => (
+  <PageWrapper title="Financial Statements" subtitle="Balance Sheet · P&L · Cash Flow">
+    <StatementsPage/>
   </PageWrapper>
 );
 
 const AppShell = () => {
   const { user, logout } = useAuth();
-  const [activeView, setActiveView] = useState<ExtendedView>("dashboard");
-
+  const [activeView, setActiveView] = useState<ActiveView>("dashboard");
   return (
     <AppProvider isLoggedIn={!!user}>
       <div style={{ minHeight:"100vh", background:"#0f172a", color:"#f1f5f9", fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif" }}>
-        <Header
-          activeView={activeView}
-          onNavigate={setActiveView}
-          userEmail={user?.email}
-          onLogout={logout}
-        />
-        {activeView==="dashboard" && <DashboardView onNavigateToAdd={()=>setActiveView("add")}/>}
-        {activeView==="add"       && <AddView onSuccess={()=>setActiveView("dashboard")} onCancel={()=>setActiveView("dashboard")}/>}
-        {activeView==="history"   && <HistoryView onNavigateToAdd={()=>setActiveView("add")}/>}
-        {activeView==="import"    && <ImportView onDone={()=>setActiveView("dashboard")}/>}
+        <Header activeView={activeView} onNavigate={setActiveView} userEmail={user?.email} onLogout={logout}/>
+        {activeView==="dashboard"  && <DashboardView onNavigateToAdd={()=>setActiveView("add")}/>}
+        {activeView==="add"        && <AddView onSuccess={()=>setActiveView("dashboard")} onCancel={()=>setActiveView("dashboard")}/>}
+        {activeView==="history"    && <HistoryView onNavigateToAdd={()=>setActiveView("add")}/>}
+        {activeView==="import"     && <ImportView onDone={()=>setActiveView("dashboard")}/>}
+        {activeView==="statements" && <StatementsView/>}
       </div>
     </AppProvider>
   );
 };
 
-const Root = () => {
-  const { user } = useAuth();
-  return user ? <AppShell /> : <AuthPage />;
-};
+const Root = () => { const { user } = useAuth(); return user ? <AppShell/> : <AuthPage/>; };
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <Root />
-    </AuthProvider>
-  );
+  return <AuthProvider><Root/></AuthProvider>;
 }
