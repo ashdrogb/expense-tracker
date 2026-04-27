@@ -31,16 +31,25 @@ const parseDate = (raw: string): string => {
 // ─── Amount Parser — strips Indian number formatting ─────────────────────────
 const parseAmount = (raw: string): number => parseFloat(raw.replace(/,/g, "").trim()) || 0;
 
-// ─── Category Rules — O(k) keyword scan per transaction ──────────────────────
-// Rules are checked in order — first match wins.
-// Add more rules here as needed.
-const EXPENSE_RULES: { keywords: string[]; category: string }[] = [
+// ─── Category Rules ───────────────────────────────────────────────────────────
+// Rules checked in order — first match wins.
+// Each rule has a list of keywords OR regex patterns to match against description.
+
+interface Rule {
+  keywords?: string[];
+  patterns?: RegExp[];
+  category: string;
+}
+
+const EXPENSE_RULES: Rule[] = [
   // Transport
   { keywords: ["metro", "dmrc", "uber", "ola", "rapido", "irctc", "railway", "bus", "auto", "cab", "toll", "petrol", "fuel", "parking"], category: "Transport" },
   // Food
   { keywords: ["fresh", "food", "sweets", "bread", "nature", "cafe", "zomato", "swiggy", "restaurant", "kitchen", "bakery", "dairy", "milk", "grocer", "vegetable", "fruits", "blinkit", "zepto", "instamart"], category: "Food" },
-  // Investment (Zerodha and other brokers)
-  { keywords: ["zerodha", "groww", "upstox", "zerodha konsult", "nse", "bse", "mutual fund", "mf", "sip", "demat"], category: "Investment" },
+  // Investment transfers out
+  { keywords: ["zerodha", "groww", "upstox", "nse", "bse", "demat", "sip"], category: "Investment" },
+  // Interest paid — catches "Int.Pd:", "interest paid", "int pd" patterns
+  { patterns: [/int\.?pd/i, /interest\s*paid/i, /int\s*paid/i], category: "Health" },
   // Housing
   { keywords: ["rent", "maintenance", "society", "housing", "flat", "pg", "landlord"], category: "Housing" },
   // Utilities
@@ -55,19 +64,39 @@ const EXPENSE_RULES: { keywords: string[]; category: string }[] = [
   { keywords: ["udemy", "coursera", "college", "school", "fees", "tuition", "education", "course", "book"], category: "Education" },
 ];
 
-const INCOME_RULES: { keywords: string[]; category: string }[] = [
+const INCOME_RULES: Rule[] = [
+  // Investment returns — dividend, interest received, Int.Cr patterns
+  {
+    keywords: ["dividend", "div ", "divd"],
+    patterns: [/int\.?cr/i, /interest\s*cr/i, /interest\s*received/i, /int\.?pd.*cr/i],
+    category: "Investment",
+  },
+  // Interest received (bank interest credited)
+  { patterns: [/int\.?cr/i, /interest\s*credit/i, /int\s*cr/i], category: "Investment" },
+  // Salary
   { keywords: ["salary", "sal ", "payroll", "stipend"], category: "Salary" },
+  // Freelance
   { keywords: ["freelance", "project", "client", "consulting"], category: "Freelance" },
-  { keywords: ["dividend", "interest", "returns", "zerodha", "groww", "upstox", "mutual fund"], category: "Investment" },
-  { keywords: ["refund", "cashback", "reversal"], category: "Other" },
-  { keywords: ["gift", "bonus", "reward"], category: "Bonus" },
+  // Refunds
+  { keywords: ["refund", "cashback", "reversal", "chargeback"], category: "Other" },
+  // Bonus / gift
+  { keywords: ["gift", "bonus", "reward", "incentive"], category: "Bonus" },
+  // Investment returns (broker credited)
+  { keywords: ["zerodha", "groww", "upstox", "mutual fund", "mf redemption", "redemption"], category: "Investment" },
 ];
 
-const guessCategory = (description: string, type: "income" | "expense"): string => {
+// ─── Rule matcher — checks both keywords and regex patterns ──────────────────
+const matchesRule = (description: string, rule: Rule): boolean => {
   const d = description.toLowerCase();
+  if (rule.keywords?.some(kw => d.includes(kw))) return true;
+  if (rule.patterns?.some(rx => rx.test(description))) return true;
+  return false;
+};
+
+const guessCategory = (description: string, type: "income" | "expense"): string => {
   const rules = type === "expense" ? EXPENSE_RULES : INCOME_RULES;
   for (const rule of rules) {
-    if (rule.keywords.some(kw => d.includes(kw))) return rule.category;
+    if (matchesRule(description, rule)) return rule.category;
   }
   return "Other";
 };
@@ -121,8 +150,8 @@ export const CSVImport = ({ onDone }: CSVImportProps) => {
     reader.readAsText(file);
   };
 
-  const toggleRow    = (i: number) => setRows(prev => prev.map((r, idx) => idx === i ? { ...r, selected: !r.selected } : r));
-  const toggleAll    = () => { const all = rows.every(r => r.selected); setRows(prev => prev.map(r => ({ ...r, selected: !all }))); };
+  const toggleRow      = (i: number) => setRows(prev => prev.map((r, idx) => idx === i ? { ...r, selected: !r.selected } : r));
+  const toggleAll      = () => { const all = rows.every(r => r.selected); setRows(prev => prev.map(r => ({ ...r, selected: !all }))); };
   const updateCategory = (i: number, category: string) => setRows(prev => prev.map((r, idx) => idx === i ? { ...r, category } : r));
 
   const handleImport = async () => {
@@ -140,7 +169,7 @@ export const CSVImport = ({ onDone }: CSVImportProps) => {
     } finally { setImporting(false); }
   };
 
-  const fmt = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+  const fmt = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
   const selectedCount = rows.filter(r => r.selected).length;
   const ALL_CATEGORIES = ["Food","Transport","Housing","Health","Shopping","Entertainment","Education","Utilities","Salary","Freelance","Investment","Gift","Bonus","Other"];
 
@@ -178,7 +207,7 @@ export const CSVImport = ({ onDone }: CSVImportProps) => {
             <thead>
               <tr style={{ background:"#0f172a", position:"sticky", top:0 }}>
                 {["✓","Date","Description","Category","Amount","Type"].map(h => (
-                  <th key={h} style={{ padding:"10px 12px", color:"#64748b", fontWeight:600, textAlign: h === "Amount" ? "right" : "left" }}>{h}</th>
+                  <th key={h} style={{ padding:"10px 12px", color:"#64748b", fontWeight:600, textAlign: h==="Amount" ? "right" : "left" }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -193,9 +222,9 @@ export const CSVImport = ({ onDone }: CSVImportProps) => {
                       {ALL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </td>
-                  <td style={{ padding:"10px 12px", textAlign:"right", fontWeight:700, color: row.type === "income" ? "#22c55e" : "#f43f5e" }}>{row.type === "income" ? "+" : "−"}{fmt(row.amount)}</td>
+                  <td style={{ padding:"10px 12px", textAlign:"right", fontWeight:700, color: row.type==="income" ? "#22c55e" : "#f43f5e" }}>{row.type==="income" ? "+" : "−"}{fmt(row.amount)}</td>
                   <td style={{ padding:"10px 12px" }}>
-                    <span style={{ padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:600, background: row.type === "income" ? "rgba(34,197,94,.15)" : "rgba(244,63,94,.15)", color: row.type === "income" ? "#22c55e" : "#f43f5e" }}>{row.type}</span>
+                    <span style={{ padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:600, background: row.type==="income" ? "rgba(34,197,94,.15)" : "rgba(244,63,94,.15)", color: row.type==="income" ? "#22c55e" : "#f43f5e" }}>{row.type}</span>
                   </td>
                 </tr>
               ))}
@@ -204,7 +233,7 @@ export const CSVImport = ({ onDone }: CSVImportProps) => {
         </div>
         <div style={{ display:"flex", gap:10 }}>
           <button onClick={onDone} style={{ flex:1, padding:"14px 0", borderRadius:12, border:"1px solid #334155", background:"transparent", color:"#94a3b8", fontWeight:700, cursor:"pointer", fontSize:15 }}>Cancel</button>
-          <button onClick={handleImport} disabled={importing || selectedCount === 0} style={{ flex:2, padding:"14px 0", borderRadius:12, border:"none", cursor: importing || selectedCount === 0 ? "not-allowed" : "pointer", background:"linear-gradient(135deg,#6366f1,#8b5cf6)", color:"#fff", fontWeight:700, fontSize:15, opacity: importing || selectedCount === 0 ? 0.6 : 1 }}>
+          <button onClick={handleImport} disabled={importing || selectedCount===0} style={{ flex:2, padding:"14px 0", borderRadius:12, border:"none", cursor: importing||selectedCount===0 ? "not-allowed" : "pointer", background:"linear-gradient(135deg,#6366f1,#8b5cf6)", color:"#fff", fontWeight:700, fontSize:15, opacity: importing||selectedCount===0 ? 0.6 : 1 }}>
             {importing ? "Importing..." : `Import ${selectedCount} Transactions`}
           </button>
         </div>

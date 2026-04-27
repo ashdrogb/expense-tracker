@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-type ActiveView = "dashboard" | "add" | "history" | "import" | "statements";
+type ActiveView = "dashboard" | "add" | "history" | "import" | "statements" | "settings";
 
 interface HeaderProps {
   activeView: ActiveView;
@@ -10,33 +10,34 @@ interface HeaderProps {
 }
 
 const NAV_ITEMS: { view: ActiveView; label: string; icon: string }[] = [
-  { view: "dashboard",  label: "Dashboard",   icon: "📊" },
-  { view: "add",        label: "Add",          icon: "➕" },
-  { view: "history",    label: "History",      icon: "📋" },
-  { view: "import",     label: "Import CSV",   icon: "📂" },
-  { view: "statements", label: "Statements",   icon: "🏦" },
+  { view: "dashboard",  label: "Dashboard",  icon: "📊" },
+  { view: "add",        label: "Add",         icon: "➕" },
+  { view: "history",    label: "History",     icon: "📋" },
+  { view: "import",     label: "Import CSV",  icon: "📂" },
+  { view: "statements", label: "Statements",  icon: "🏦" },
+  { view: "settings",   label: "Settings",    icon: "⚙️" },
 ];
 
 export const Header = ({ activeView, onNavigate, userEmail, onLogout }: HeaderProps) => (
-  <header style={{ background:"linear-gradient(135deg,#1a1f2e 0%,#0f172a 100%)", borderBottom:"1px solid #1e293b", padding:"0 28px", display:"flex", alignItems:"center", justifyContent:"space-between", height:64, position:"sticky", top:0, zIndex:100 }}>
-    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+  <header style={{ background:"linear-gradient(135deg,#1a1f2e 0%,#0f172a 100%)", borderBottom:"1px solid #1e293b", padding:"0 20px", display:"flex", alignItems:"center", justifyContent:"space-between", height:64, position:"sticky", top:0, zIndex:100 }}>
+    <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
       <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#6366f1,#8b5cf6)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>💸</div>
       <div>
-        <div style={{ fontWeight:800, fontSize:16, letterSpacing:"-0.02em", color:"#f1f5f9" }}>ExpenseTracker</div>
-        <div style={{ fontSize:10, color:"#475569", letterSpacing:"0.05em", textTransform:"uppercase" }}>Personal Finance</div>
+        <div style={{ fontWeight:800, fontSize:15, letterSpacing:"-0.02em", color:"#f1f5f9" }}>ExpenseTracker</div>
+        <div style={{ fontSize:9, color:"#475569", letterSpacing:"0.05em", textTransform:"uppercase" }}>Personal Finance</div>
       </div>
     </div>
-    <nav style={{ display:"flex", gap:4 }}>
+    <nav style={{ display:"flex", gap:2, flexWrap:"wrap", justifyContent:"center" }}>
       {NAV_ITEMS.map(({ view, label, icon }) => (
-        <button key={view} onClick={() => onNavigate(view)} style={{ padding:"8px 14px", borderRadius:10, border:"none", cursor:"pointer", fontWeight:600, fontSize:12, display:"flex", alignItems:"center", gap:5, background: activeView===view ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent", color: activeView===view ? "#fff" : "#64748b" }}>
+        <button key={view} onClick={() => onNavigate(view)} style={{ padding:"7px 12px", borderRadius:10, border:"none", cursor:"pointer", fontWeight:600, fontSize:12, display:"flex", alignItems:"center", gap:4, background: activeView===view ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent", color: activeView===view ? "#fff" : "#64748b" }}>
           <span>{icon}</span> {label}
         </button>
       ))}
     </nav>
     {userEmail && (
-      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-        <span style={{ fontSize:13, color:"#64748b" }}>{userEmail}</span>
-        <button onClick={onLogout} style={{ padding:"7px 14px", borderRadius:8, border:"1px solid #334155", background:"transparent", color:"#64748b", cursor:"pointer", fontSize:12, fontWeight:600 }}>Sign Out</button>
+      <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+        <span style={{ fontSize:12, color:"#64748b" }}>{userEmail}</span>
+        <button onClick={onLogout} style={{ padding:"6px 12px", borderRadius:8, border:"1px solid #334155", background:"transparent", color:"#64748b", cursor:"pointer", fontSize:12, fontWeight:600 }}>Sign Out</button>
       </div>
     )}
   </header>

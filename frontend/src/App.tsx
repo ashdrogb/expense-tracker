@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AppProvider } from "./context/AppContext";
+import { EncryptionProvider, useEncryption } from "./context/EncryptionContext";
 import { Header, PageWrapper } from "./components/layout";
 import { StatCard } from "./components/ui";
 import { MonthlyBarChart, CategoryPieChart, NetLineChart } from "./components/charts";
@@ -8,9 +9,12 @@ import { TransactionList, TransactionForm } from "./components/transactions";
 import { CSVImport } from "./components/csv";
 import { StatementsPage } from "./components/statements";
 import { AuthPage } from "./components/auth";
+import { EncryptionGate, EncryptionSettings } from "./components/encryption";
 import { useFinancials } from "./hooks";
 
-type ActiveView = "dashboard" | "add" | "history" | "import" | "statements";
+type ActiveView = "dashboard" | "add" | "history" | "import" | "statements" | "settings";
+
+// ─── Views ────────────────────────────────────────────────────────────────────
 
 const DashboardView = ({ onNavigateToAdd }: { onNavigateToAdd: () => void }) => {
   const { summary, monthlySummaries, expenseBreakdown } = useFinancials();
@@ -62,11 +66,33 @@ const StatementsView = () => (
   </PageWrapper>
 );
 
+const SettingsView = () => (
+  <PageWrapper title="Settings" subtitle="Manage your account and security">
+    <EncryptionSettings/>
+  </PageWrapper>
+);
+
+// ─── App Shell ────────────────────────────────────────────────────────────────
+
 const AppShell = () => {
-  const { user, logout } = useAuth();
+  const { user, logout }    = useAuth();
+  const { encKey, isEncrypted } = useEncryption();
   const [activeView, setActiveView] = useState<ActiveView>("dashboard");
+  const [encUnlocked, setEncUnlocked] = useState(!isEncrypted);
+
+  // If encryption is enabled but key not loaded — show unlock gate
+  if (isEncrypted && !encUnlocked) {
+    return (
+      <EncryptionGate
+        isFirstTime={false}
+        onUnlocked={() => setEncUnlocked(true)}
+        onSkip={() => setEncUnlocked(true)}
+      />
+    );
+  }
+
   return (
-    <AppProvider isLoggedIn={!!user}>
+    <AppProvider isLoggedIn={!!user} encKey={encKey}>
       <div style={{ minHeight:"100vh", background:"#0f172a", color:"#f1f5f9", fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif" }}>
         <Header activeView={activeView} onNavigate={setActiveView} userEmail={user?.email} onLogout={logout}/>
         {activeView==="dashboard"  && <DashboardView onNavigateToAdd={()=>setActiveView("add")}/>}
@@ -74,13 +100,23 @@ const AppShell = () => {
         {activeView==="history"    && <HistoryView onNavigateToAdd={()=>setActiveView("add")}/>}
         {activeView==="import"     && <ImportView onDone={()=>setActiveView("dashboard")}/>}
         {activeView==="statements" && <StatementsView/>}
+        {activeView==="settings"   && <SettingsView/>}
       </div>
     </AppProvider>
   );
 };
 
-const Root = () => { const { user } = useAuth(); return user ? <AppShell/> : <AuthPage/>; };
+const Root = () => {
+  const { user } = useAuth();
+  return user ? <AppShell/> : <AuthPage/>;
+};
 
 export default function App() {
-  return <AuthProvider><Root/></AuthProvider>;
+  return (
+    <AuthProvider>
+      <EncryptionProvider>
+        <Root/>
+      </EncryptionProvider>
+    </AuthProvider>
+  );
 }
