@@ -43,7 +43,7 @@ interface Rule {
 
 const EXPENSE_RULES: Rule[] = [
   // Transport
-  { keywords: ["metro", "dmrc", "uber", "ola", "rapido", "irctc", "railway", "bus", "auto", "cab", "toll", "petrol", "fuel", "parking"], category: "Transport" },
+  { keywords: ["metro", "dmrc", "uber", "ka0", "ola", "rapido", "irctc", "railway", "bus", "auto", "cab", "toll", "petrol", "fuel", "parking"], category: "Transport" },
   // Food
   { keywords: ["fresh", "food", "sweets", "bread", "nature", "cafe", "zomato", "swiggy", "restaurant", "kitchen", "bakery", "dairy", "milk", "grocer", "vegetable", "fruits", "blinkit", "zepto", "instamart"], category: "Food" },
   // Investment transfers out
