@@ -30,7 +30,7 @@ export const MonthlyBarChart = ({ data, height = 240 }: MonthlyBarChartProps) =>
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} barGap={4} barCategoryGap="30%">
         <XAxis dataKey="label" stroke="#334155" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
-        <YAxis stroke="#334155" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} />
+        <YAxis stroke="#334155" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `₹${v}`} />
         <Tooltip {...tooltipStyle} formatter={(v: number) => fmt(v)} />
         <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: "#64748b" }} />
         <Bar dataKey="income"  fill="#22c55e" radius={[6,6,0,0]} name="Income" />
@@ -56,7 +56,7 @@ export const NetLineChart = ({ data, height = 180 }: NetLineChartProps) => (
       <LineChart data={data}>
         <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
         <XAxis dataKey="label" stroke="#334155" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
-        <YAxis stroke="#334155" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} />
+        <YAxis stroke="#334155" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `₹${v}`} />
         <Tooltip {...tooltipStyle} formatter={(v: number) => fmt(v)} />
         <Line type="monotone" dataKey="net" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: "#6366f1", r: 4 }} name="Net" />
       </LineChart>
